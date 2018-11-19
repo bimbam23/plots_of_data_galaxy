@@ -80,9 +80,9 @@ Tol_light <- c('#BBCC33', '#AAAA00', '#77AADD', '#EE8866', '#EEDD88', '#FFAABB',
 
 
 #Read a text file (comma separated values)
-df_wide_example <- read.csv("Data_wide_example.csv", na.strings = "")
+# df_wide_example <- read.csv("Data_wide_example.csv", na.strings = "")
 df_tidy_example <- read.csv("Data_tidy_example.csv", na.strings = "")
-mtcars_example <- read.csv("mtcars.csv", na.strings = "")
+#mtcars_example <- read.csv("mtcars.csv", na.strings = "")
 mpg_example <- read.csv("mpg.csv", na.strings = "")
 
  #######################################
