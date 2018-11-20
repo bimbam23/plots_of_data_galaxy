@@ -1,10 +1,10 @@
 # plots_of_data_galaxy
 
-this app was adaped from https://github.com/JoachimGoedhart/Plotsofdata/
+this app was adapted from https://github.com/JoachimGoedhart/Plotsofdata/
 
-### About PlotsOfData
+### About plots_of_data_galaxy
 
-coming soon
+The goal of this project is to implement the most frequently used and needed plots in galaxy. In addition the idea is to make them interactive and easy to plot starting from any data.frame (table) object.
 
 ### Running the App
 
