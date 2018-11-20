@@ -99,7 +99,8 @@ ui <- fluidPage(
                                     "Dotplot" = "dotplot", 
                                     "Boxplot" = "boxplot",
                                     "Heatmap" = "heatmap",
-                                    "PCA" = "pca"), 
+                                    "PCA plot" = "pca",
+                                    "UpSet plot" = "upset"), 
                      selected = "boxplot"),
         conditionalPanel( 
           condition = "input.plot_type=='boxplot' || input.plot_type=='barplot' || input.plot_type=='dotplot'",
@@ -127,7 +128,9 @@ ui <- fluidPage(
           # ),
             
           radioButtons("summaryInput", "Statistics", 
-                       choices = list("Median" = "median", "Mean" = "mean", "Boxplot (minimal n=10)" = "boxplot", "Violin Plot (minimal n=10)" = "violin"),
+                       choices = list("Median" = "median", "Mean" = "mean",
+                                      "Boxplot (minimal n=10)" = "boxplot",
+                                      "Violin Plot (minimal n=10)" = "violin"),
                        selected = "median"),
   #        sliderInput("Input_CI", "Confidence Level", 90, 100, 95),
           checkboxInput(inputId = "add_CI", 
@@ -149,6 +152,8 @@ ui <- fluidPage(
                            checkboxInput(inputId = "errorbar", label = "Error bars", value = FALSE))
         )),
   
+  #######################################
+  ##############    PCA   ###############   
   conditionalPanel( 
     condition = "input.plot_type=='pca'",
     checkboxInput(inputId = "modify_col_rows",
@@ -167,7 +172,21 @@ ui <- fluidPage(
                  choices = list("Show shapes" = "shape", 
                                 "Show labels (group elements)" = "label", 
                                 "Show shapes and labels" = "both"), 
-                 selected = "label")
+                 selected = "label"),
+    selectInput("select_groups", "Select groups", choices = list("No groups" = "no_groups", 
+                                                          "Groups" = "groups")),
+    conditionalPanel(
+      condition = "input.select_groups == 'groups'",
+      selectInput("select_colnames_pca_group", "Select group colum:", choices = ""),
+      radioButtons("pca_plot_circle", "Select plot layout", 
+                   choices = list("No ellipes" = "no",
+                                  "Convex" = "convex",
+                                  "T-Distribution" = "t", 
+                                  "Normal distribution" = "norm",
+                                  "Euclidean distance" = "euclid"), 
+                   selected = "no")
+      
+      )
     ),
   
   #######################################
@@ -461,6 +480,7 @@ observe({
         var_list_fill <- c("none", var_names_upload)
         # check if numeric
         var_list_y <- c("none", var_names_upload[unlist(lapply(df_upload(), is.numeric))])
+        var_names_upload_groups <- var_names_upload
         
         # used for bar box and dot plot
         updateSelectInput(session, "select_xaxes", choices = var_list_x)
@@ -471,6 +491,8 @@ observe({
         # used for PCA selection
         updateSelectInput(session, "select_colnames_pca", choices = var_names_upload)
         updateSelectInput(session, "select_rownames_pca", choices = var_rownames_upload)
+        # used for PCA groups
+        updateSelectInput(session, "select_colnames_pca_group", choices = var_names_upload_groups)
         })
  ###################################    
 
@@ -871,6 +893,9 @@ output$coolplot <- renderPlot(width = width, height = height, {
         astring <- aes_string(x=input$select_xaxes, y=input$select_yaxes)
       }
       p <- ggplot(data=df_bar, astring)
+      
+      
+      # if PCA
     }else if(input$plot_type == "pca"){
       
       cat("input$plot_type:", input$pca_plot_type, "\n")
