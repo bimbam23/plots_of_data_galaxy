@@ -43,6 +43,7 @@ library(ggbeeswarm)
 library(readxl)
 library(shinyWidgets)
 library(ggfortify)
+library(UpSetR)
 # library(Rmisc)
 ################
 #log file
@@ -85,6 +86,43 @@ df_tidy_example <- read.csv("Data_tidy_example.csv", na.strings = "")
 # mtcars_example <- read.csv("mtcars.csv", na.strings = "")
 mpg_example <- read.csv("mpg.csv", na.strings = "")
 
+example_files_input <- c("mpg.csv", "Data_tidy_example.csv", "pca.txt", "movies.csv", "mpg.csv", "mpg.csv")
+
+
+# needs to be added somewhere
+# dropdownMenu(type = "tasks",
+#              icon = icon("wrench fa-1g"),
+#              badgeStatus = NULL,
+#              headerText = "Diagnostics",
+#              notificationItem(
+#                text = actionButton(
+#                  'open_linkgraph', label="Examine panel chart",
+#                  icon = icon("chain"),
+#                  style=.actionbutton_biocstyle
+#                ),
+#                icon = icon(""), status = "primary"
+#              ),
+#              notificationItem(
+#                text = actionButton(
+#                  'getcode_all', label="Extract the R code",
+#                  icon = icon("magic"),
+#                  style=.actionbutton_biocstyle
+#                ),
+#                icon = icon(""), status = "primary"
+#              ),
+#              notificationItem(
+#                text = actionButton(
+#                  'get_panel_settings', label="Display panel settings",
+#                  icon = icon("clipboard"),
+#                  style=.actionbutton_biocstyle
+#                ),
+#                icon = icon(""), status = "primary"
+#              )
+# ), # end of dropdownMenu
+
+
+
+
  #######################################
 ###### Define the User interface #########
 
@@ -106,7 +144,7 @@ ui <- fluidPage(
           condition = "input.plot_type=='boxplot' || input.plot_type=='barplot' || input.plot_type=='dotplot'",
           selectInput("select_xaxes", "Select x-axes:", choices = ""),
           selectInput("select_yaxes", "Select y-axes:", choices = ""),
-          selectInput("select_fill", "Select fill:",  choices = "")
+          selectInput("select_fill", "Select color column:",  choices = "")
         ),
         
         #######################################
@@ -188,6 +226,25 @@ ui <- fluidPage(
       
       )
     ),
+
+  #######################################
+  ##############  UPSET  ############### 
+  conditionalPanel( 
+    condition = "input.plot_type=='upset'",
+    numericInput("upset_nset", "Number of sets to look at", 
+                 5, min = 2),
+    numericInput("upset_nintersects", "Number of intersections to plot", 
+                 40, min = 2),
+    radioButtons("upset_order_by", "Select order", 
+                 choices = list("fequency" = "freq", 
+                                "degree" = "degree"), 
+                 selected = "degree")#,
+    #pickerInput("upset_sets", "Specific sets to look at", options = list(`actions-box` = TRUE), choices = "", multiple = TRUE)
+
+    
+  ),
+  
+  
   
   #######################################
   ############## ALLPLOT ###############        
@@ -292,12 +349,25 @@ ui <- fluidPage(
         radioButtons(
           "data_input", "",
           choices = 
-            list("Example 1 (mpg)" = 1,
-                 "Example 2 (tidy format)" = 2,
+            list("Select dataset" = 0,
+                 #"Example 1 (mpg)" = 1,
+                 #"Example 2 (tidy format)" = 2,
                  "Upload file" = 3,
                  "Paste data" = 4)
           ,
-          selected =  1),
+          selected =  0),
+        conditionalPanel(
+          condition = "input.data_input=='0'",
+          selectInput("select_file", "Select file:",
+                      list("Mpg (barplot)" = "1",
+                           "Experiment (boxplot)" = "2",
+                           "Experiment 2 (pca)" = "3",
+                           "Movies (upset)" = "4",
+                           "Count table (heatnap)" = "5",
+                           "MTcars (boxplot)" = "6"
+                      ),
+                      selected = "1")
+        ),
         conditionalPanel(
           condition = "input.data_input=='1'"
           
@@ -370,8 +440,7 @@ ui <- fluidPage(
   #######################################
   ############## SAVE FILE ##############        
     mainPanel(
- 
-       tabsetPanel(id="tabs",
+        tabsetPanel(id="tabs",
                   tabPanel("Data upload", h4("Data as provided"), dataTableOutput("data_uploaded")),
                   tabPanel("Plot",
                            #downloadButton("downloadPlotPDF", "Download pdf-file"), 
@@ -400,6 +469,9 @@ server <- function(input, output, session) {
   ###### DATA INPUT ###################
 
   df_upload <- reactive({
+    if (input$data_input == 0) {
+      data <- read.csv(example_files_input[as.integer(input$select_file)], na.strings = "")
+    }
     if (input$data_input == 1) {
       data <- mpg_example
     }  else if (input$data_input == 2) {
@@ -898,14 +970,22 @@ output$coolplot <- renderPlot(width = width, height = height, {
       # if PCA
     }else if(input$plot_type == "pca"){
       
+      
       cat("input$plot_type:", input$pca_plot_type, "\n")
       # basic vars
+      circles_boolean <- TRUE
       plot_options <- c("shape", "label") %in% input$pca_plot_type
       cat("plot_options:", plot_options, "\n")
       if(all(!plot_options[1], !plot_options[2])){ # both 
         plot_options <- c(TRUE, TRUE)
       }
       cat("plot_options:", plot_options, "\n")
+      
+      ## set boolean elipes_value to plot circle options
+      if(input$select_groups == "no_group" & input$pca_plot_circle %in% "no"){
+        circles_boolean <- FALSE
+      }
+      
       # subset to numeric only
       if(input$modify_col_rows){
         df_pca <- df_bar[input$select_rownames_pca, input$select_colnames_pca]
@@ -1051,7 +1131,7 @@ output$coolplot <- renderPlot(width = width, height = height, {
       
   }else if(input$plot_type == "pca"){
       
-  }
+  }else if(!(input$plot_type == "upset")){
 ########### Do some formatting of the lay-out
      # Setting the order of the x-axis
      # p <- p + scale_x_discrete(limits=custom_order)
@@ -1112,10 +1192,22 @@ output$coolplot <- renderPlot(width = width, height = height, {
        }
      }
       
-    ### Output the plot ######
-    p
+
+  }else{ #its and upset plot
+    # df_bar <- read.csv("movies.csv")
+    # setwd("~/projects/shiny_test/plots_of_data_galaxy/")
+    cat("\nINFO:::Upset plot:::\n")
+    cat("\nINFO:::", input$upset_nset, ":::\n")
+    cat("\nINFO:::", input$upset_nintersects, ":::\n")
+    cat("\nINFO:::", input$upset_order_by, ":::\n")
+    cat("\nINFO:::", names(df_bar), ":::\n")
+   p <- upset(data = df_bar, nsets = as.integer(input$upset_nset), nintersects = as.integer(input$upset_nintersects), order.by = input$upset_order_by)
+  }
     
+  ### Output the plot ######
+  p
   }) #close output$coolplot
+
 
 
 ###########################################
