@@ -86,7 +86,8 @@ df_tidy_example <- read.csv("Data_tidy_example.csv", na.strings = "")
 # mtcars_example <- read.csv("mtcars.csv", na.strings = "")
 mpg_example <- read.csv("mpg.csv", na.strings = "")
 
-example_files_input <- c("mpg.csv", "Data_tidy_example.csv", "pca.txt", "movies.csv", "mpg.csv", "mpg.csv")
+example_files_input <- c("mpg.csv", "Data_tidy_example.csv", 
+                         "pca.txt", "movies.csv", "mpg.csv", "mtcars.csv")
 
 
 # needs to be added somewhere
